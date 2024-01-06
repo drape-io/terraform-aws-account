@@ -137,3 +137,15 @@ variable "default_roles" {
   github actions.
   EOT
 }
+
+/* This is the default role that is generated in every subaccount so the master
+account can assume into it. */
+variable "assume_role" {
+  type    = string
+  default = "OrganizationAccountAccessRole"
+}
+
+variable "region" {
+  type    = string
+  default = "us-east-1"
+}
