@@ -149,3 +149,9 @@ variable "region" {
   type    = string
   default = "us-east-1"
 }
+
+variable "use_context_for_name" {
+  type    = bool
+  default = true
+  description = "If you set to false it'll use var.name and var.email instead of dynamically generating one from the context"
+}

@@ -1,6 +1,6 @@
 resource "aws_organizations_account" "account" {
   count                      = local.context.enabled ? 1 : 0
-  email                      = "${local.email_user}+${local.name}@${local.email_domain}"
+  email                      = local.email
   name                       = local.name
   tags                       = local.context.tags
   parent_id                  = var.ou_id
