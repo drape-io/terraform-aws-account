@@ -9,61 +9,19 @@ locals {
   access_policies = {
     for role, value in local.roles :
     role => value.access_policy.policy
+    if lookup(value, "assume_role_policy", null) != null
   }
+
+  # Merge both policy types into a single map so we only need one
+  # aws_iam_policy_document resource with one copy of the dynamic block.
+  all_policies = merge(
+    { for k, v in local.assume_roles : "assume/${k}" => v },
+    { for k, v in local.access_policies : "access/${k}" => v },
+  )
 }
 
-data "aws_iam_policy_document" "assume" {
-  for_each = length(local.assume_roles) > 0 ? local.assume_roles : {}
-
-  policy_id = each.value.policy_id
-  version   = each.value.version
-
-  dynamic "statement" {
-    for_each = each.value.statements
-
-    content {
-      sid    = statement.value.sid
-      effect = statement.value.effect
-
-      actions     = statement.value.actions
-      not_actions = statement.value.not_actions
-
-      resources     = statement.value.resources
-      not_resources = statement.value.not_resources
-
-      dynamic "principals" {
-        for_each = statement.value.principals
-
-        content {
-          type        = principals.value.type
-          identifiers = principals.value.identifiers
-        }
-      }
-
-      dynamic "not_principals" {
-        for_each = statement.value.not_principals
-
-        content {
-          type        = not_principals.value.type
-          identifiers = not_principals.value.identifiers
-        }
-      }
-
-      dynamic "condition" {
-        for_each = statement.value.conditions
-
-        content {
-          test     = condition.value.test
-          variable = condition.value.variable
-          values   = condition.value.values
-        }
-      }
-    }
-  }
-}
-
-data "aws_iam_policy_document" "access" {
-  for_each = length(local.access_policies) > 0 ? local.access_policies : {}
+data "aws_iam_policy_document" "this" {
+  for_each = local.all_policies
 
   policy_id = each.value.policy_id
   version   = each.value.version
@@ -113,26 +71,26 @@ data "aws_iam_policy_document" "access" {
 }
 
 resource "aws_iam_role" "roles" {
-  for_each           = local.context.enabled ? local.assume_roles : {}
+  for_each           = local.assume_roles
   name               = format("%s-%s", module.ctx.id_full, each.key)
   description        = var.default_roles[each.key].assume_role_policy.description
-  assume_role_policy = data.aws_iam_policy_document.assume[each.key].json
+  assume_role_policy = data.aws_iam_policy_document.this["assume/${each.key}"].json
   tags               = module.ctx.tags
+  provider           = aws.subaccount
 }
 
 resource "aws_iam_policy" "roles" {
-  for_each    = local.context.enabled ? local.access_policies : {}
+  for_each    = local.assume_roles
   name        = format("%s-%s", module.ctx.id_full, each.key)
   description = var.default_roles[each.key].access_policy.description
-  policy      = data.aws_iam_policy_document.access[each.key].json
+  policy      = data.aws_iam_policy_document.this["access/${each.key}"].json
   provider    = aws.subaccount
   tags        = module.ctx.tags
 }
 
-resource "aws_iam_policy_attachment" "roles" {
-  for_each   = local.context.enabled ? local.access_policies : {}
-  name       = format("%s-%s", module.ctx.id_full, each.key)
-  roles      = ["${aws_iam_role.roles[each.key].name}"]
+resource "aws_iam_role_policy_attachment" "roles" {
+  for_each   = local.assume_roles
+  role       = aws_iam_role.roles[each.key].name
   policy_arn = aws_iam_policy.roles[each.key].arn
   provider   = aws.subaccount
 }

@@ -6,4 +6,6 @@ locals {
 
   email = var.use_context_for_name ? "${local.email_user}+${local.name}@${local.email_domain}" : var.email
   name  = var.use_context_for_name ? format("%s-%s", module.ctx.id_full, var.name) : var.name
+
+  sso_enabled = local.context.enabled && var.permission_assignments != null
 }
