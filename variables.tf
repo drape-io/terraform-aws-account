@@ -1,12 +1,20 @@
 variable "email" {
+  type        = string
   description = "The owner e-mail address"
+
+  validation {
+    condition     = can(regex("@", var.email))
+    error_message = "Must be a valid email address containing @."
+  }
 }
 
 variable "name" {
+  type        = string
   description = "The name of the account"
 }
 
 variable "ou_id" {
+  type        = string
   default     = null
   description = "The organizational unit to place the account under"
 }
@@ -38,15 +46,20 @@ variable "account_iam_user_access_to_billing" {
   Default to `ALLOW` since we don't want to be using root users.
   EOT
   default     = "ALLOW"
+
+  validation {
+    condition     = contains(["ALLOW", "DENY"], var.account_iam_user_access_to_billing)
+    error_message = "Must be ALLOW or DENY."
+  }
 }
 
 variable "permission_assignments" {
   type = object({
-    groups = map(object({
+    groups = optional(map(object({
       permission_set_arn = string
       group_id           = string
-    }))
-    users = map(string)
+    })), {})
+    users = optional(map(string), {})
   })
 
   default     = null
@@ -57,20 +70,8 @@ variable "permission_assignments" {
 }
 
 variable "default_roles" {
-  /*
-  {
-    "s3-full-access": {
-        "assume_role_policy": {
-            description: ...,
-            policy: ...,
-        },
-        "access_policy": {
-            description: ...,
-            policy: ...,
-        }
-    }
-  }
-  */
+  # The statement object type is intentionally repeated for assume_role_policy
+  # and access_policy — Terraform does not support type aliases.
   type = map(object({
     assume_role_policy = optional(object({
       policy = object({
@@ -101,7 +102,7 @@ variable "default_roles" {
       description = string
     }))
     access_policy = object({
-      policy : object({
+      policy = object({
         policy_id = optional(string, null)
         version   = optional(string, null)
         statements = list(object({
@@ -126,7 +127,7 @@ variable "default_roles" {
           })), [])
         }))
       }),
-      description : string
+      description = string
     })
   }))
 
@@ -138,20 +139,26 @@ variable "default_roles" {
   EOT
 }
 
-/* This is the default role that is generated in every subaccount so the master
-account can assume into it. */
 variable "assume_role" {
-  type    = string
-  default = "OrganizationAccountAccessRole"
+  type        = string
+  default     = "OrganizationAccountAccessRole"
+  description = "The default role generated in every subaccount so the management account can assume into it."
 }
 
 variable "region" {
-  type    = string
-  default = "us-east-1"
+  type        = string
+  default     = "us-east-1"
+  description = "AWS region for the subaccount provider."
+}
+
+variable "close_on_deletion" {
+  type        = bool
+  default     = false
+  description = "Whether to close the account on deletion. If false, the account will be removed from the organization but not closed."
 }
 
 variable "use_context_for_name" {
-  type    = bool
-  default = true
+  type        = bool
+  default     = true
   description = "If you set to false it'll use var.name and var.email instead of dynamically generating one from the context"
 }
