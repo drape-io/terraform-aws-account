@@ -37,5 +37,5 @@ First stable release.
 ### CI
 
 - Pin GitHub Actions to commit SHAs, set `permissions: contents: read` and `persist-credentials: false`.
-- Pull requests without the LocalStack token skip the test job instead of failing.
+- When the LocalStack token is not available, the test job skips the tests with a warning instead of failing.
 - Dependabot tracks the Compose file, waits 7 days before it proposes an update, and groups GitHub Actions updates.

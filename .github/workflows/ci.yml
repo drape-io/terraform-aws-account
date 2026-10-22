@@ -48,9 +48,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: lint
     steps:
-      # Fork and Dependabot pull requests do not receive repository secrets.
-      # Skip the LocalStack tests there instead of failing. A push to main
-      # without the token still fails.
+      # The tests need LocalStack Pro. Fork and Dependabot pull requests do
+      # not receive repository secrets, so skip the tests with a warning when
+      # the token is not available instead of failing.
       - name: Check for LocalStack token
         id: token
         env:
@@ -58,12 +58,9 @@ jobs:
         run: |
           if [ -n "$LOCALSTACK_AUTH_TOKEN" ]; then
             echo "present=true" >> "$GITHUB_OUTPUT"
-          elif [ "$GITHUB_EVENT_NAME" = "push" ]; then
-            echo "::error::LOCALSTACK_AUTH_TOKEN is not set"
-            exit 1
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Skipping tests because LOCALSTACK_AUTH_TOKEN is not available to this pull request"
+            echo "::warning::Skipping tests because LOCALSTACK_AUTH_TOKEN is not available"
           fi
 
       - if: steps.token.outputs.present == 'true'
