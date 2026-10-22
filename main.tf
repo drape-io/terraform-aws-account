@@ -1,5 +1,5 @@
 resource "aws_organizations_account" "account" {
-  count                      = local.context.enabled ? 1 : 0
+  count                      = module.ctx.enabled ? 1 : 0
   email                      = local.email
   name                       = local.name
   tags                       = module.ctx.tags

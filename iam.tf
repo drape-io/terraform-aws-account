@@ -1,5 +1,5 @@
 locals {
-  roles = local.context.enabled && var.default_roles != null ? var.default_roles : {}
+  roles = module.ctx.enabled && var.default_roles != null ? var.default_roles : {}
 
   assume_roles = {
     for role, value in local.roles :
