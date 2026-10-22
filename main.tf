@@ -8,7 +8,9 @@ resource "aws_organizations_account" "account" {
   close_on_deletion          = var.close_on_deletion
 
   lifecycle {
-    ignore_changes = [iam_user_access_to_billing]
+    # AWS cannot change a member account's email through this resource, and
+    # a changed email would force replacement of a live account.
+    ignore_changes = [iam_user_access_to_billing, email]
   }
 }
 
