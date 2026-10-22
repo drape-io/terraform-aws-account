@@ -3,8 +3,6 @@ provider "aws" {
   secret_key = "dev-tfstate-backend"
   region     = "us-east-1"
 
-  # https://registry.terraform.io/providers/hashicorp/aws/latest/docs#s3_use_path_style
-  # s3_use_path_style           = true
   skip_credentials_validation = true
   skip_metadata_api_check     = true
   skip_requesting_account_id  = true
@@ -25,8 +23,6 @@ provider "aws" {
   secret_key = "dev-tfstate-backend"
   region     = "us-east-1"
 
-  # https://registry.terraform.io/providers/hashicorp/aws/latest/docs#s3_use_path_style
-  # s3_use_path_style           = true
   skip_credentials_validation = true
   skip_metadata_api_check     = true
   skip_requesting_account_id  = true
@@ -99,8 +95,8 @@ run "test_default_roles" {
     default_roles = {
       s3-list-access = {
         assume_role_policy = {
-          description : "Allow management account to assume S3 list access"
-          policy : {
+          description = "Allow management account to assume S3 list access"
+          policy = {
             statements = [
               {
                 effect  = "Allow"
@@ -114,13 +110,12 @@ run "test_default_roles" {
                   }
                 ]
               }
-
             ]
           }
         }
         access_policy = {
-          description : "Give role access to s3",
-          policy : {
+          description = "Give role access to s3"
+          policy = {
             statements = [
               {
                 effect    = "Allow"

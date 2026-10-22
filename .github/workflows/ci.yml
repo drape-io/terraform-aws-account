@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  TF_VERSION: "1.12.1"
+
 jobs:
   lint:
     name: Lint
@@ -19,7 +22,7 @@ jobs:
       - uses: hashicorp/setup-terraform@v4
         with:
           terraform_wrapper: false
-          terraform_version: "1.12.1"
+          terraform_version: ${{ env.TF_VERSION }}
 
       - name: Terraform Format
         run: terraform fmt -check -recursive
@@ -48,7 +51,7 @@ jobs:
       - uses: hashicorp/setup-terraform@v4
         with:
           terraform_wrapper: false
-          terraform_version: "1.12.1"
+          terraform_version: ${{ env.TF_VERSION }}
 
       - name: Start LocalStack
         env:
