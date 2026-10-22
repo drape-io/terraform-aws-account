@@ -3,7 +3,7 @@ variable "email" {
   description = "The owner e-mail address"
 
   validation {
-    condition     = can(regex("@", var.email))
+    condition     = strcontains(var.email, "@")
     error_message = "Must be a valid email address containing @."
   }
 }
@@ -40,7 +40,7 @@ variable "context" {
 variable "account_iam_user_access_to_billing" {
   type        = string
   description = <<-EOT
-  If set to `ALLOW`, IAM users have access account billing information if they
+  If set to `ALLOW`, IAM users have access to account billing information if they
   have the required permissions. If set to `DENY`, then only the root user can.
 
   Default to `ALLOW` since we don't want to be using root users.
@@ -101,7 +101,7 @@ variable "default_roles" {
             identifiers = list(string)
           })), [])
         }))
-      }),
+      })
       description = string
     }))
     access_policy = object({
@@ -129,7 +129,7 @@ variable "default_roles" {
             identifiers = list(string)
           })), [])
         }))
-      }),
+      })
       description = string
     })
   }))

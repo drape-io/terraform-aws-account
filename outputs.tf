@@ -1,10 +1,10 @@
 output "account_id" {
-  value       = try(aws_organizations_account.account[0].id, null)
+  value       = one(aws_organizations_account.account[*].id)
   description = "The unique identifier (ID) of the account."
 }
 
 output "account_name" {
-  value       = try(aws_organizations_account.account[0].name, null)
+  value       = one(aws_organizations_account.account[*].name)
   description = "The name of the account."
 }
 
