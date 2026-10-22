@@ -32,7 +32,11 @@ First stable release.
 ### Documentation
 
 - The README pins examples to `?ref=v1.0.0`, lists requirements, and adds a `users` example.
-- New README section on changing or removing an account: email changes, `assume_role`, how to disable an account that has `default_roles`, and `close_on_deletion`.
+- New README section on changing or removing an account: email changes, `assume_role`, how to remove an account that has `default_roles`, and `close_on_deletion`.
+
+### Known issues
+
+- `enabled = false` in the context fails at plan with `Invalid index`. The module configures a provider for the new account, and that configuration needs the account. The README describes how to remove an account instead.
 
 ### CI
 

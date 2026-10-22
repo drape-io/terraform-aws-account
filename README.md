@@ -136,7 +136,7 @@ Set `use_context_for_name = false` to use `var.name` and `var.email` directly in
 - The module sets the account email only when it creates the account. AWS cannot change a member account's email through Terraform, so the module ignores later email changes. A change to `name` or to the context renames the account in place.
 - A change to `name` or to the context also changes the names of the IAM roles and policies from `default_roles`. Terraform replaces those roles and policies.
 - `assume_role` must match the role that AWS created in the account. By default this is `OrganizationAccountAccessRole`.
-- To disable the module for an account that has `default_roles`, first set `default_roles = null` and apply. Then set `enabled = false` in the context and apply again.
+- In this release, `enabled = false` in the context fails at plan, because the module configures a provider for the new account. To remove an account, first set `default_roles = null` and apply. Then remove the module block and apply again.
 - With `close_on_deletion = false`, destroying the module removes the account from the organization. AWS allows that only after the account has the details it needs to run as a standalone account, such as a payment method. With `close_on_deletion = true`, destroying the module closes the account.
 
 ## Inputs
