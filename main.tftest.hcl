@@ -3,8 +3,6 @@ provider "aws" {
   secret_key = "dev-tfstate-backend"
   region     = "us-east-1"
 
-  # https://registry.terraform.io/providers/hashicorp/aws/latest/docs#s3_use_path_style
-  # s3_use_path_style           = true
   skip_credentials_validation = true
   skip_metadata_api_check     = true
   skip_requesting_account_id  = true
@@ -25,8 +23,6 @@ provider "aws" {
   secret_key = "dev-tfstate-backend"
   region     = "us-east-1"
 
-  # https://registry.terraform.io/providers/hashicorp/aws/latest/docs#s3_use_path_style
-  # s3_use_path_style           = true
   skip_credentials_validation = true
   skip_metadata_api_check     = true
   skip_requesting_account_id  = true
@@ -68,6 +64,15 @@ run "test_create_account" {
     condition     = aws_organizations_account.account[0].email == "group-sre+drape-dev-security@test.com"
     error_message = "The e-mail was wrong."
   }
+
+  assert {
+    condition = aws_organizations_account.account[0].tags == tomap({
+      group        = "drape"
+      environment  = "development"
+      "managed-by" = "terraform"
+    })
+    error_message = "The account tags were wrong."
+  }
 }
 
 run "test_close_on_deletion_default" {
@@ -99,8 +104,8 @@ run "test_default_roles" {
     default_roles = {
       s3-list-access = {
         assume_role_policy = {
-          description : "Allow management account to assume S3 list access"
-          policy : {
+          description = "Allow management account to assume S3 list access"
+          policy = {
             statements = [
               {
                 effect  = "Allow"
@@ -114,13 +119,12 @@ run "test_default_roles" {
                   }
                 ]
               }
-
             ]
           }
         }
         access_policy = {
-          description : "Give role access to s3",
-          policy : {
+          description = "Give role access to s3"
+          policy = {
             statements = [
               {
                 effect    = "Allow"
@@ -155,18 +159,18 @@ run "test_default_roles" {
   }
 
   assert {
-    condition     = output.role_arns != null
-    error_message = "role_arns output should not be null when roles are created"
+    condition     = keys(output.role_arns) == ["s3-list-access"]
+    error_message = "role_arns output should be keyed by role key"
   }
 
   assert {
-    condition     = output.role_names != null
-    error_message = "role_names output should not be null when roles are created"
+    condition     = output.role_names == { "s3-list-access" = "drape-dev-s3-list-access" }
+    error_message = "role_names output should map role key to role name"
   }
 
   assert {
-    condition     = output.policy_arns != null
-    error_message = "policy_arns output should not be null when roles are created"
+    condition     = keys(output.policy_arns) == ["s3-list-access"]
+    error_message = "policy_arns output should be keyed by role key"
   }
 }
 
@@ -214,5 +218,22 @@ run "test_disabled" {
   assert {
     condition     = output.account_name == null
     error_message = "account_name output should be null when enabled is false"
+  }
+}
+
+run "test_tag_key_case_from_context" {
+  command = plan
+
+  variables {
+    context = {
+      group        = "drape"
+      env          = "dev"
+      tag_key_case = "upper"
+    }
+  }
+
+  assert {
+    condition     = contains(keys(aws_organizations_account.account[0].tags), "GROUP")
+    error_message = "tag_key_case from the context should reach terraform-null-context"
   }
 }

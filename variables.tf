@@ -3,7 +3,7 @@ variable "email" {
   description = "The owner e-mail address"
 
   validation {
-    condition     = can(regex("@", var.email))
+    condition     = strcontains(var.email, "@")
     error_message = "Must be a valid email address containing @."
   }
 }
@@ -19,31 +19,35 @@ variable "ou_id" {
   description = "The organizational unit to place the account under"
 }
 
-# This was copied from `drape-io/terraform-null-context` since it'll be passed
-# along to it.
+# Mirrors the `context` input of terraform-null-context, which receives it.
 variable "context" {
   type = object({
-    enabled    = optional(bool)
-    group      = optional(string)
-    tenant     = optional(string)
-    env        = optional(string)
-    scope      = optional(string)
-    attributes = optional(list(string))
-    tags       = optional(map(string))
+    enabled        = optional(bool)
+    group          = optional(string)
+    tenant         = optional(string)
+    env            = optional(string)
+    scope          = optional(string)
+    attributes     = optional(list(string))
+    tags           = optional(map(string))
+    tag_key_case   = optional(string)
+    tag_value_case = optional(string)
   })
   description = <<-EOT
-    Used to pass an object of any of the variables used to this module.  It is
-    used to seed the module with labels from another context.
+    A terraform-null-context object. The module takes its labels and tags
+    from this context.
   EOT
 }
 
 variable "account_iam_user_access_to_billing" {
   type        = string
   description = <<-EOT
-  If set to `ALLOW`, IAM users have access account billing information if they
+  If set to `ALLOW`, IAM users have access to account billing information if they
   have the required permissions. If set to `DENY`, then only the root user can.
 
-  Default to `ALLOW` since we don't want to be using root users.
+  The default is `ALLOW`, so that billing access does not need the root user.
+
+  The module sets this value when it creates the account and ignores later
+  changes.
   EOT
   default     = "ALLOW"
 
@@ -64,16 +68,17 @@ variable "permission_assignments" {
 
   default     = null
   description = <<-EOT
-  Permission assignments. Group key is group.id, User key is email address,
-  value is permission set ARN
+  IAM Identity Center permission assignments for the account.
+  `groups` maps an arbitrary label to `{ permission_set_arn, group_id }`.
+  `users` maps an Identity Store `UserName` to a permission set ARN.
   EOT
 }
 
 variable "default_roles" {
   # The statement object type is intentionally repeated for assume_role_policy
-  # and access_policy — Terraform does not support type aliases.
+  # and access_policy, because Terraform does not support type aliases.
   type = map(object({
-    assume_role_policy = optional(object({
+    assume_role_policy = object({
       policy = object({
         policy_id = optional(string, null)
         version   = optional(string, null)
@@ -98,9 +103,9 @@ variable "default_roles" {
             identifiers = list(string)
           })), [])
         }))
-      }),
+      })
       description = string
-    }))
+    })
     access_policy = object({
       policy = object({
         policy_id = optional(string, null)
@@ -126,23 +131,22 @@ variable "default_roles" {
             identifiers = list(string)
           })), [])
         }))
-      }),
+      })
       description = string
     })
   }))
 
   default     = null
   description = <<-EOT
-  Default roles to create in the account after it is created.  This is useful
-  when you want to create some standard roles for things like terraform and
-  github actions.
+  IAM roles to create in the new account, for example standard roles for
+  Terraform and GitHub Actions.
   EOT
 }
 
 variable "assume_role" {
   type        = string
   default     = "OrganizationAccountAccessRole"
-  description = "The default role generated in every subaccount so the management account can assume into it."
+  description = "The role the management account assumes in the new account to create default_roles. It must match the role that AWS created with the account (OrganizationAccountAccessRole unless the account was created with a different role_name)."
 }
 
 variable "region" {
@@ -154,11 +158,11 @@ variable "region" {
 variable "close_on_deletion" {
   type        = bool
   default     = false
-  description = "Whether to close the account on deletion. If false, the account will be removed from the organization but not closed."
+  description = "Whether to close the account on deletion. If false, Terraform removes the account from the organization but does not close it. AWS allows that removal only after the account has the details it needs to run as a standalone account, such as a payment method."
 }
 
 variable "use_context_for_name" {
   type        = bool
   default     = true
-  description = "If you set to false it'll use var.name and var.email instead of dynamically generating one from the context"
+  description = "If false, the module uses var.name and var.email as given instead of deriving them from the context."
 }

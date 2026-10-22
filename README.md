@@ -1,12 +1,19 @@
 # terraform-aws-account
 
-Terraform module for provisioning AWS Organizations sub-accounts with optional IAM roles and AWS Identity Center (SSO) permission assignments.
+This Terraform module creates an AWS Organizations member account. It can also create IAM roles in the new account and assign IAM Identity Center (SSO) permission sets to groups and users.
 
 ## Prerequisites
 
 - AWS Organizations enabled in the management account
-- AWS Identity Center (SSO) configured if using `permission_assignments`
+- IAM Identity Center (SSO) configured, if you use `permission_assignments`
 - Management account credentials with permissions to create accounts
+
+## Requirements
+
+| Name | Version |
+|------|---------|
+| Terraform | `>= 1.6` |
+| `hashicorp/aws` provider | `>= 6.0, < 7.0` |
 
 ## Usage
 
@@ -14,7 +21,7 @@ Terraform module for provisioning AWS Organizations sub-accounts with optional I
 
 ```hcl
 module "deployment" {
-  source  = "github.com/drape-io/terraform-aws-account"
+  source  = "github.com/drape-io/terraform-aws-account?ref=v1.0.0"
   name    = "deployment"
   context = local.context
   email   = "group-sre@example.com"
@@ -33,7 +40,7 @@ When `use_context_for_name` is `true` (the default), the module constructs the a
 data "aws_organizations_organization" "org" {}
 
 locals {
-  # The management account ID — roles in subaccounts trust this account
+  # Roles in the new account trust the management account
   management_account_id = data.aws_organizations_organization.org.master_account_id
 
   default_roles = {
@@ -72,7 +79,7 @@ locals {
 }
 
 module "security" {
-  source        = "github.com/drape-io/terraform-aws-account"
+  source        = "github.com/drape-io/terraform-aws-account?ref=v1.0.0"
   name          = "security"
   context       = { group = "drape", env = "sec" }
   email         = "group-sre@example.com"
@@ -84,12 +91,12 @@ module "security" {
 
 ```hcl
 module "platform" {
-  source  = "github.com/drape-io/terraform-aws-account"
+  source  = "github.com/drape-io/terraform-aws-account?ref=v1.0.0"
   name    = "platform"
   context = local.context
   email   = "group-sre@example.com"
 
-  # Both groups and users are optional — pass only what you need
+  # Both groups and users are optional. Pass only the ones you need.
   permission_assignments = {
     groups = {
       admins = {
@@ -97,13 +104,18 @@ module "platform" {
         group_id           = aws_identitystore_group.admins.group_id
       }
     }
+
+    # The key is the Identity Store UserName. The value is a permission set ARN.
+    users = {
+      "jane@example.com" = aws_ssoadmin_permission_set.read_only.arn
+    }
   }
 }
 ```
 
 ## Context System
 
-This module uses [terraform-null-context](https://github.com/drape-io/terraform-null-context) for consistent naming and tagging. The `context` variable accepts:
+This module uses [terraform-null-context](https://github.com/drape-io/terraform-null-context) to name and tag resources. The `context` variable accepts:
 
 | Field        | Description                    |
 |-------------|-------------------------------|
@@ -114,22 +126,32 @@ This module uses [terraform-null-context](https://github.com/drape-io/terraform-
 | `scope`      | Scope identifier               |
 | `attributes` | Additional name attributes     |
 | `tags`       | Tags to apply to all resources |
+| `tag_key_case` | Case of tag keys (passed to terraform-null-context) |
+| `tag_value_case` | Case of tag values (passed to terraform-null-context) |
 
 Set `use_context_for_name = false` to use `var.name` and `var.email` directly instead of deriving them from context.
+
+## Changing or removing an account
+
+- The module sets the account email only when it creates the account. AWS cannot change a member account's email through Terraform, so the module ignores later email changes. A change to `name` or to the context renames the account in place.
+- A change to `name` or to the context also changes the names of the IAM roles and policies from `default_roles`. Terraform replaces those roles and policies.
+- `assume_role` must match the role that AWS created in the account. By default this is `OrganizationAccountAccessRole`.
+- In this release, `enabled = false` in the context fails at plan, because the module configures a provider for the new account. To remove an account, first set `default_roles = null` and apply. Then remove the module block and apply again.
+- With `close_on_deletion = false`, destroying the module removes the account from the organization. AWS allows that only after the account has the details it needs to run as a standalone account, such as a payment method. With `close_on_deletion = true`, destroying the module closes the account.
 
 ## Inputs
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|----------|
-| `name` | The name of the account | `string` | — | yes |
-| `email` | The owner e-mail address | `string` | — | yes |
-| `context` | Context object for naming and tagging | `object` | — | yes |
+| `name` | The name of the account | `string` | n/a | yes |
+| `email` | The owner e-mail address | `string` | n/a | yes |
+| `context` | Context object for naming and tagging | `object` | n/a | yes |
 | `ou_id` | The organizational unit to place the account under | `string` | `null` | no |
-| `account_iam_user_access_to_billing` | Allow IAM users access to billing (`ALLOW` or `DENY`) | `string` | `"ALLOW"` | no |
-| `permission_assignments` | SSO permission assignments for groups and users | `object` | `null` | no |
-| `default_roles` | IAM roles to create in the account | `map(object)` | `null` | no |
-| `assume_role` | Role name for cross-account access | `string` | `"OrganizationAccountAccessRole"` | no |
-| `region` | AWS region | `string` | `"us-east-1"` | no |
+| `account_iam_user_access_to_billing` | Allow IAM users access to billing (`ALLOW` or `DENY`). The module sets this at account creation and ignores later changes | `string` | `"ALLOW"` | no |
+| `permission_assignments` | SSO permission assignments. `groups` maps a label to `{ permission_set_arn, group_id }`. `users` maps an Identity Store `UserName` to a permission set ARN | `object` | `null` | no |
+| `default_roles` | IAM roles to create in the account. Each entry needs an `assume_role_policy` and an `access_policy` | `map(object)` | `null` | no |
+| `assume_role` | Role that the management account assumes to create `default_roles`. It must match the role that AWS created with the account | `string` | `"OrganizationAccountAccessRole"` | no |
+| `region` | AWS region for the provider that creates `default_roles` in the new account | `string` | `"us-east-1"` | no |
 | `close_on_deletion` | Whether to close the account on deletion | `bool` | `false` | no |
 | `use_context_for_name` | Derive name/email from context | `bool` | `true` | no |
 

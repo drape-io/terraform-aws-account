@@ -1,5 +1,5 @@
 resource "aws_organizations_account" "account" {
-  count                      = local.context.enabled ? 1 : 0
+  count                      = module.ctx.enabled ? 1 : 0
   email                      = local.email
   name                       = local.name
   tags                       = module.ctx.tags
@@ -8,7 +8,9 @@ resource "aws_organizations_account" "account" {
   close_on_deletion          = var.close_on_deletion
 
   lifecycle {
-    ignore_changes = [iam_user_access_to_billing]
+    # AWS cannot change a member account's email through this resource, and
+    # a changed email would force replacement of a live account.
+    ignore_changes = [iam_user_access_to_billing, email]
   }
 }
 

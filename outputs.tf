@@ -1,16 +1,16 @@
 output "account_id" {
-  value       = try(aws_organizations_account.account[0].id, null)
+  value       = one(aws_organizations_account.account[*].id)
   description = "The unique identifier (ID) of the account."
 }
 
 output "account_name" {
-  value       = try(aws_organizations_account.account[0].name, null)
+  value       = one(aws_organizations_account.account[*].name)
   description = "The name of the account."
 }
 
 output "role_arns" {
   value       = { for k, v in aws_iam_role.roles : k => v.arn }
-  description = "Map of role name to ARN for all created IAM roles."
+  description = "Map of role key to ARN for all created IAM roles."
 }
 
 output "role_names" {
