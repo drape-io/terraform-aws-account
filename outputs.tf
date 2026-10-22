@@ -10,7 +10,7 @@ output "account_name" {
 
 output "role_arns" {
   value       = { for k, v in aws_iam_role.roles : k => v.arn }
-  description = "Map of role name to ARN for all created IAM roles."
+  description = "Map of role key to ARN for all created IAM roles."
 }
 
 output "role_names" {

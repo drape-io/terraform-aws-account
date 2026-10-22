@@ -44,6 +44,8 @@ variable "account_iam_user_access_to_billing" {
   have the required permissions. If set to `DENY`, then only the root user can.
 
   Default to `ALLOW` since we don't want to be using root users.
+
+  Only applied when the account is created; later changes are ignored.
   EOT
   default     = "ALLOW"
 
@@ -64,8 +66,9 @@ variable "permission_assignments" {
 
   default     = null
   description = <<-EOT
-  Permission assignments. Group key is group.id, User key is email address,
-  value is permission set ARN
+  IAM Identity Center permission assignments for the account.
+  `groups` maps an arbitrary label to `{ permission_set_arn, group_id }`.
+  `users` maps an Identity Store `UserName` to a permission set ARN.
   EOT
 }
 
