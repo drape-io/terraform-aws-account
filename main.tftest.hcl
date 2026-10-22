@@ -64,6 +64,15 @@ run "test_create_account" {
     condition     = aws_organizations_account.account[0].email == "group-sre+drape-dev-security@test.com"
     error_message = "The e-mail was wrong."
   }
+
+  assert {
+    condition = aws_organizations_account.account[0].tags == tomap({
+      group        = "drape"
+      environment  = "development"
+      "managed-by" = "terraform"
+    })
+    error_message = "The account tags were wrong."
+  }
 }
 
 run "test_close_on_deletion_default" {

@@ -8,10 +8,17 @@ First stable release.
 
 - `default_roles`: each entry now requires `assume_role_policy`. Before, the module skipped an entry without it, including its `access_policy`, and reported no error.
 - The `hashicorp/aws` provider requirement is now `>= 6.0, < 7.0` (was `~> 6.36`).
+- terraform-null-context is now pinned to `v1.0.0` (was a commit on its main branch). That release adds validation: the `group`, `tenant`, `env`, `scope` and `attributes` fields of `context` can only contain letters, digits and hyphens. A context with other characters now fails at plan.
 
 ### Behavior changes
 
 - The module ignores changes to the account email after it creates the account. Before, a change to `name`, to the context, or to `use_context_for_name` changed the email and forced Terraform to replace the account.
+- Tags from terraform-null-context `v1.0.0` can change when the `context` carries `tags`:
+  - The tags that the module generates (`group`, `tenant`, `environment`, `scope`) now win over a `context.tags` entry with the same key. Before, the `context.tags` value won.
+  - An uppercase `env` shorthand such as `PRD` now gives `environment = production`.
+  - Terraform updates these tags in place on the account and the IAM roles and policies. It does not replace them.
+- Account names, emails, IAM role and policy names, and tags for a context without `tags` do not change. The tests pin these values.
+- terraform-null-context no longer uses the `hashicorp/random` provider. This module never truncated its ID, so no state changes.
 
 ### Added
 
