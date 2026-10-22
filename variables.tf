@@ -19,17 +19,18 @@ variable "ou_id" {
   description = "The organizational unit to place the account under"
 }
 
-# This was copied from `drape-io/terraform-null-context` since it'll be passed
-# along to it.
+# Mirrors the `context` input of terraform-null-context, which receives it.
 variable "context" {
   type = object({
-    enabled    = optional(bool)
-    group      = optional(string)
-    tenant     = optional(string)
-    env        = optional(string)
-    scope      = optional(string)
-    attributes = optional(list(string))
-    tags       = optional(map(string))
+    enabled        = optional(bool)
+    group          = optional(string)
+    tenant         = optional(string)
+    env            = optional(string)
+    scope          = optional(string)
+    attributes     = optional(list(string))
+    tags           = optional(map(string))
+    tag_key_case   = optional(string)
+    tag_value_case = optional(string)
   })
   description = <<-EOT
     A terraform-null-context object. The module takes its labels and tags
@@ -77,7 +78,7 @@ variable "default_roles" {
   # The statement object type is intentionally repeated for assume_role_policy
   # and access_policy, because Terraform does not support type aliases.
   type = map(object({
-    assume_role_policy = optional(object({
+    assume_role_policy = object({
       policy = object({
         policy_id = optional(string, null)
         version   = optional(string, null)
@@ -104,7 +105,7 @@ variable "default_roles" {
         }))
       })
       description = string
-    }))
+    })
     access_policy = object({
       policy = object({
         policy_id = optional(string, null)
@@ -145,7 +146,7 @@ variable "default_roles" {
 variable "assume_role" {
   type        = string
   default     = "OrganizationAccountAccessRole"
-  description = "The default role generated in every subaccount so the management account can assume into it."
+  description = "The role the management account assumes in the new account to create default_roles. It must match the role that AWS created with the account (OrganizationAccountAccessRole unless the account was created with a different role_name)."
 }
 
 variable "region" {
@@ -157,7 +158,7 @@ variable "region" {
 variable "close_on_deletion" {
   type        = bool
   default     = false
-  description = "Whether to close the account on deletion. If false, Terraform removes the account from the organization but does not close it."
+  description = "Whether to close the account on deletion. If false, Terraform removes the account from the organization but does not close it. AWS allows that removal only after the account has the details it needs to run as a standalone account, such as a payment method."
 }
 
 variable "use_context_for_name" {

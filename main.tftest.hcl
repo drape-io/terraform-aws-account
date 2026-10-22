@@ -211,3 +211,20 @@ run "test_disabled" {
     error_message = "account_name output should be null when enabled is false"
   }
 }
+
+run "test_tag_key_case_from_context" {
+  command = plan
+
+  variables {
+    context = {
+      group        = "drape"
+      env          = "dev"
+      tag_key_case = "upper"
+    }
+  }
+
+  assert {
+    condition     = contains(keys(aws_organizations_account.account[0].tags), "GROUP")
+    error_message = "tag_key_case from the context should reach terraform-null-context"
+  }
+}

@@ -1,22 +1,11 @@
 locals {
   roles = module.ctx.enabled && var.default_roles != null ? var.default_roles : {}
 
-  assume_roles = {
-    for role, value in local.roles :
-    role => value.assume_role_policy.policy
-    if lookup(value, "assume_role_policy", null) != null
-  }
-  access_policies = {
-    for role, value in local.roles :
-    role => value.access_policy.policy
-    if lookup(value, "assume_role_policy", null) != null
-  }
-
   # Merge both policy types into a single map so we only need one
   # aws_iam_policy_document resource with one copy of the dynamic block.
   all_policies = merge(
-    { for k, v in local.assume_roles : "assume/${k}" => v },
-    { for k, v in local.access_policies : "access/${k}" => v },
+    { for k, v in local.roles : "assume/${k}" => v.assume_role_policy.policy },
+    { for k, v in local.roles : "access/${k}" => v.access_policy.policy },
   )
 }
 
@@ -71,25 +60,25 @@ data "aws_iam_policy_document" "this" {
 }
 
 resource "aws_iam_role" "roles" {
-  for_each           = local.assume_roles
+  for_each           = local.roles
   name               = format("%s-%s", module.ctx.id_full, each.key)
-  description        = var.default_roles[each.key].assume_role_policy.description
+  description        = each.value.assume_role_policy.description
   assume_role_policy = data.aws_iam_policy_document.this["assume/${each.key}"].json
   tags               = module.ctx.tags
   provider           = aws.subaccount
 }
 
 resource "aws_iam_policy" "roles" {
-  for_each    = local.assume_roles
+  for_each    = local.roles
   name        = format("%s-%s", module.ctx.id_full, each.key)
-  description = var.default_roles[each.key].access_policy.description
+  description = each.value.access_policy.description
   policy      = data.aws_iam_policy_document.this["access/${each.key}"].json
   provider    = aws.subaccount
   tags        = module.ctx.tags
 }
 
 resource "aws_iam_role_policy_attachment" "roles" {
-  for_each   = local.assume_roles
+  for_each   = local.roles
   role       = aws_iam_role.roles[each.key].name
   policy_arn = aws_iam_policy.roles[each.key].arn
   provider   = aws.subaccount
