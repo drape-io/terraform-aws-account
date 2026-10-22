@@ -32,8 +32,8 @@ variable "context" {
     tags       = optional(map(string))
   })
   description = <<-EOT
-    Used to pass an object of any of the variables used to this module.  It is
-    used to seed the module with labels from another context.
+    A terraform-null-context object. The module takes its labels and tags
+    from this context.
   EOT
 }
 
@@ -43,9 +43,10 @@ variable "account_iam_user_access_to_billing" {
   If set to `ALLOW`, IAM users have access to account billing information if they
   have the required permissions. If set to `DENY`, then only the root user can.
 
-  Default to `ALLOW` since we don't want to be using root users.
+  The default is `ALLOW`, so that billing access does not need the root user.
 
-  Only applied when the account is created; later changes are ignored.
+  The module sets this value when it creates the account and ignores later
+  changes.
   EOT
   default     = "ALLOW"
 
@@ -74,7 +75,7 @@ variable "permission_assignments" {
 
 variable "default_roles" {
   # The statement object type is intentionally repeated for assume_role_policy
-  # and access_policy — Terraform does not support type aliases.
+  # and access_policy, because Terraform does not support type aliases.
   type = map(object({
     assume_role_policy = optional(object({
       policy = object({
@@ -136,9 +137,8 @@ variable "default_roles" {
 
   default     = null
   description = <<-EOT
-  Default roles to create in the account after it is created.  This is useful
-  when you want to create some standard roles for things like terraform and
-  github actions.
+  IAM roles to create in the new account, for example standard roles for
+  Terraform and GitHub Actions.
   EOT
 }
 
@@ -157,11 +157,11 @@ variable "region" {
 variable "close_on_deletion" {
   type        = bool
   default     = false
-  description = "Whether to close the account on deletion. If false, the account will be removed from the organization but not closed."
+  description = "Whether to close the account on deletion. If false, Terraform removes the account from the organization but does not close it."
 }
 
 variable "use_context_for_name" {
   type        = bool
   default     = true
-  description = "If you set to false it'll use var.name and var.email instead of dynamically generating one from the context"
+  description = "If false, the module uses var.name and var.email as given instead of deriving them from the context."
 }

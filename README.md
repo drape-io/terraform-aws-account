@@ -1,11 +1,11 @@
 # terraform-aws-account
 
-Terraform module for provisioning AWS Organizations sub-accounts with optional IAM roles and AWS Identity Center (SSO) permission assignments.
+This Terraform module creates an AWS Organizations member account. It can also create IAM roles in the new account and assign IAM Identity Center (SSO) permission sets to groups and users.
 
 ## Prerequisites
 
 - AWS Organizations enabled in the management account
-- AWS Identity Center (SSO) configured if using `permission_assignments`
+- IAM Identity Center (SSO) configured, if you use `permission_assignments`
 - Management account credentials with permissions to create accounts
 
 ## Requirements
@@ -40,7 +40,7 @@ When `use_context_for_name` is `true` (the default), the module constructs the a
 data "aws_organizations_organization" "org" {}
 
 locals {
-  # The management account ID — roles in subaccounts trust this account
+  # Roles in the new account trust the management account
   management_account_id = data.aws_organizations_organization.org.master_account_id
 
   default_roles = {
@@ -96,7 +96,7 @@ module "platform" {
   context = local.context
   email   = "group-sre@example.com"
 
-  # Both groups and users are optional — pass only what you need
+  # Both groups and users are optional. Pass only the ones you need.
   permission_assignments = {
     groups = {
       admins = {
@@ -105,7 +105,7 @@ module "platform" {
       }
     }
 
-    # Keyed by Identity Store UserName; the value is a permission set ARN
+    # The key is the Identity Store UserName. The value is a permission set ARN.
     users = {
       "jane@example.com" = aws_ssoadmin_permission_set.read_only.arn
     }
@@ -115,7 +115,7 @@ module "platform" {
 
 ## Context System
 
-This module uses [terraform-null-context](https://github.com/drape-io/terraform-null-context) for consistent naming and tagging. The `context` variable accepts:
+This module uses [terraform-null-context](https://github.com/drape-io/terraform-null-context) to name and tag resources. The `context` variable accepts:
 
 | Field        | Description                    |
 |-------------|-------------------------------|
@@ -133,12 +133,12 @@ Set `use_context_for_name = false` to use `var.name` and `var.email` directly in
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|----------|
-| `name` | The name of the account | `string` | — | yes |
-| `email` | The owner e-mail address | `string` | — | yes |
-| `context` | Context object for naming and tagging | `object` | — | yes |
+| `name` | The name of the account | `string` | n/a | yes |
+| `email` | The owner e-mail address | `string` | n/a | yes |
+| `context` | Context object for naming and tagging | `object` | n/a | yes |
 | `ou_id` | The organizational unit to place the account under | `string` | `null` | no |
-| `account_iam_user_access_to_billing` | Allow IAM users access to billing (`ALLOW` or `DENY`). Only applied at account creation; later changes are ignored | `string` | `"ALLOW"` | no |
-| `permission_assignments` | SSO permission assignments. `groups` maps a label to `{ permission_set_arn, group_id }`; `users` maps an Identity Store `UserName` to a permission set ARN | `object` | `null` | no |
+| `account_iam_user_access_to_billing` | Allow IAM users access to billing (`ALLOW` or `DENY`). The module sets this at account creation and ignores later changes | `string` | `"ALLOW"` | no |
+| `permission_assignments` | SSO permission assignments. `groups` maps a label to `{ permission_set_arn, group_id }`. `users` maps an Identity Store `UserName` to a permission set ARN | `object` | `null` | no |
 | `default_roles` | IAM roles to create in the account | `map(object)` | `null` | no |
 | `assume_role` | Role name for cross-account access | `string` | `"OrganizationAccountAccessRole"` | no |
 | `region` | AWS region for the provider that creates `default_roles` in the new account | `string` | `"us-east-1"` | no |
