@@ -155,18 +155,18 @@ run "test_default_roles" {
   }
 
   assert {
-    condition     = output.role_arns != null
-    error_message = "role_arns output should not be null when roles are created"
+    condition     = keys(output.role_arns) == ["s3-list-access"]
+    error_message = "role_arns output should be keyed by role key"
   }
 
   assert {
-    condition     = output.role_names != null
-    error_message = "role_names output should not be null when roles are created"
+    condition     = output.role_names == { "s3-list-access" = "drape-dev-s3-list-access" }
+    error_message = "role_names output should map role key to role name"
   }
 
   assert {
-    condition     = output.policy_arns != null
-    error_message = "policy_arns output should not be null when roles are created"
+    condition     = keys(output.policy_arns) == ["s3-list-access"]
+    error_message = "policy_arns output should be keyed by role key"
   }
 }
 
